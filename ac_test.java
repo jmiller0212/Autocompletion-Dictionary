@@ -3,6 +3,7 @@
 import java.io.*;
 import java.util.Scanner;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -86,43 +87,68 @@ public class ac_test {
     // finds the words in the user_history that have the prefix of the user input
     // returns a HashMap of the strings with the prefix and the associated 
     // frequency
-    public static HashMap<String, Integer> findUserPredictions(HashMap<String, Integer> userHash, String prefix) {
-        HashMap<String, Integer> userPredictions = new HashMap<String, Integer>();
+    public static ArrayList<String> findUserPredictions(HashMap<String, Integer> userHash, String prefix) {
+        HashMap<Integer, ArrayList<String>> inverse = new HashMap<Integer, ArrayList<String>>();
+        ArrayList<Integer> userWordCounts = new ArrayList<>();
+        ArrayList<String> ret = new ArrayList<>();
         Iterator<String> words = userHash.keySet().iterator();
         String key;
-        while(words.hasNext()) {
+        while (words.hasNext()) {
             // now we have to check each iteration to see if each string
             // in the HashMap has the current prefix
             key = words.next();
-            if(key.startsWith(prefix)) {
-                userPredictions.put(key, userHash.get(key));
+            if (key.startsWith(prefix)) {
+                // if the inverse hashmap already contains that key
+                if (inverse.containsKey(userHash.get(key))) {
+                    ArrayList<String> temp = inverse.get(userHash.get(key));
+                    temp.add(key);
+                    inverse.put(userHash.get(key), temp);
+                } else {    // otherwise make a new ArrayList
+                    inverse.put(userHash.get(key), new ArrayList<String>());
+                    ArrayList<String> temp = inverse.get(userHash.get(key));
+                    temp.add(key);
+                    inverse.put(userHash.get(key), temp);
+                    // only add new word counts to the array list
+                    userWordCounts.add(userHash.get(key));
+                }
             }
         }
-        // note that this is not sorted by highest frequency yet.
-        return userPredictions;
+        Collections.sort(userWordCounts, Collections.reverseOrder());
+        for (int i = 0; i < userWordCounts.size(); i++) {
+            ArrayList<String> tempAL = inverse.get(userWordCounts.get(i));
+            for (String s : tempAL) {
+                ret.add(s);
+            }
+        }
+        return ret;
     }
-    public static ArrayList<String> combinePredictions(HashMap<String, Integer> userPred, ArrayList<String> dictPred) {
-        HashMap<String,Integer> noDuplicates = new HashMap<String, Integer>();
-        noDuplicates.putAll(userPred);
-        int arrIndex = 0;
-        int freq;
-        // ensures no duplicates are in the final prediction arraylist
-        while(noDuplicates.size() < dictPred.size()) {
-            if(noDuplicates.containsKey(dictPred.get(arrIndex))) {
-                freq = noDuplicates.get(dictPred.get(arrIndex));
-                noDuplicates.put(dictPred.get(arrIndex), freq);
-                arrIndex++;
-            } else {
-                noDuplicates.put(dictPred.get(arrIndex), 0);
-                arrIndex++;
+
+    public static ArrayList<String> combinePredictions(ArrayList<String> userPred, ArrayList<String> dictPred) {
+        int index = 0;
+        try {
+            while (userPred.size() < 5) {
+                // if the add fails break (i.e. user + dict predictions < 5)
+                if (dictPred.size() > index) {
+                    if (userPred.contains(dictPred.get(index))) {
+                        index++;
+                        continue;
+                    }
+                    if (userPred.add(dictPred.get(index))) {
+                        index++;
+                    }
+                }
+                break;
             }
+        } catch (NullPointerException e) {
+            System.out.println("No predictions! New word alert");
         }
-        ArrayList<String> finalPred = new ArrayList<>(noDuplicates.keySet());
-        return finalPred;
+        return userPred;
+
     }
     // and displayPredictions prints them out
     public static void displayPredictions(ArrayList<String> pred) {
         System.out.println("Predictions:");
+        // sanity check
         if(pred.size() > 5) {
             for(int i = 0; i < 5; i++) {
                 System.out.print("("+(i+1)+") "+pred.get(i)+"\t");
@@ -138,40 +164,25 @@ public class ac_test {
     // we check if the user accepted a prediction and then we store it into the user_history arraylist
     // case where the user_history arraylist suggests a word based on the prefix
     // definitely have to revise this method
-    public static boolean isPredictionCorrect(ArrayList<String> predictions, String option, HashMap<String, Integer> userHistory) {
+    public static boolean isPredictionCorrect(ArrayList<String> predictions, String option, HashMap<String, Integer> userHistory, Scanner input) {
         System.out.println("");
-        String word;
-        if(option.equals("1")) {
-            word = predictions.get(0);
-            System.out.println("WORD COMPLETED:\t" + word);
-            placeWordInUserHistory(word, userHistory);
-            return true;
+        String word = "";
+        try {
+            int choice = Integer.valueOf(option);
+            while (true) {
+                if (choice > 0 && choice <= predictions.size()) {
+                    word = predictions.get(choice - 1);
+                    System.out.println("WORD COMPLETED:\t" + word);
+                    placeWordInUserHistory(word, userHistory);
+                    return true;
+                }
+                System.out.println("Invalid choice. Please choose a different option");
+                displayPredictions(predictions);
+                choice = Integer.valueOf(input.next());
+            }
+        } catch (NumberFormatException e) {
+            return false;
         }
-        else if(option.equals("2")) {
-            word = predictions.get(1);
-            System.out.println("WORD COMPLETED:\t" + word);
-            placeWordInUserHistory(word, userHistory);
-            return true;
-        }
-        else if(option.equals("3")) {
-            word = predictions.get(2);
-            System.out.println("WORD COMPLETED:\t" + word);
-            placeWordInUserHistory(word, userHistory);
-            return true;
-        }
-        else if(option.equals("4")) {
-            word = predictions.get(3);
-            System.out.println("WORD COMPLETED:\t" + word);
-            placeWordInUserHistory(word, userHistory);
-            return true;
-        }
-        else if(option.equals("5")) {
-            word = predictions.get(4);
-            System.out.println("WORD COMPLETED:\t" + word);
-            placeWordInUserHistory(word, userHistory);
-            return true;
-        }
-        return false;
     }
     // if word not a new word in userHistory, set the string and increment the integer value
     // if this is a new word in userHistory, set the string and make the integer value 0
@@ -185,16 +196,17 @@ public class ac_test {
         }
     }
     public static void main(String[] args) {
-        String prefix;
-        String nextChar;
+        String prefix = "";
+        String nextChar = "";
         long startTime;
         boolean correctPrediction;
 
         HashMap<String, Integer> uHistory = new HashMap<String, Integer>();
-        HashMap<String, Integer> uPredictions = new HashMap<String, Integer>();
-        ArrayList<Double> searchTimes = new ArrayList<Double>();
-        ArrayList<String> dPredictions = new ArrayList<String>();
-        ArrayList<String> finalPredictions = new ArrayList<String>();
+        ArrayList<String> uPredictions = new ArrayList<>();
+
+        ArrayList<Double> searchTimes = new ArrayList<>();
+        ArrayList<String> dPredictions = new ArrayList<>();
+        ArrayList<String> finalPredictions = new ArrayList<>();
 
         DLB dictionary = new DLB();
         dictionary = createDictionary(dictionary);
@@ -203,54 +215,55 @@ public class ac_test {
         // initializes the scanner
         System.out.println("To complete a word, enter: '$'");
         System.out.println("To exit, enter: '!'");
-        System.out.print("\nEnter your first character: ");
         Scanner input = new Scanner(System.in);
-        nextChar = input.next();
-        prefix = nextChar;
-        boolean isNewWord = false;
 
-        while(true) {
+        boolean isNewWord = true;
+        while (true) {
             // is this the start of a new word? if so we need to get the
-            // nextChar and prefix before passing into the DLB
-            if(isNewWord) {
-                System.out.print("\nEnter the first character of the next word: ");
+            // prefix before passing into the DLB
+            if (isNewWord) {
+                System.out.print("\nEnter the first character: ");
                 nextChar = input.next();
                 prefix = nextChar;
                 isNewWord = false;
-            }
-            // for every iteration we check if the user wants to end the run
-            // works for all cases: the first word, a new word, or a regular old iteration
-            // also works with the predictions (1-5)
-            if(nextChar.equals("!")) {
-                break;
-            }
-            // then if nextChar.equals("$"); right?
-            // if(nextChar.equals("$")) {
+            } else {
+                startTime = System.nanoTime();
+                dPredictions = dictionary.suggestWords(prefix);
+                printElapsedTime(startTime, searchTimes);
+                uPredictions = findUserPredictions(uHistory, prefix);
+                finalPredictions = combinePredictions(uPredictions, dPredictions);
+                displayPredictions(finalPredictions);
 
-            // }
-
-            startTime = System.nanoTime();
-            dPredictions = dictionary.suggestWords(prefix);
-            printElapsedTime(startTime, searchTimes);
-            uPredictions = findUserPredictions(uHistory, prefix);
-            finalPredictions = combinePredictions(uPredictions, dPredictions);
-            displayPredictions(finalPredictions);
-            if(!isNewWord) {
                 System.out.print("\nEnter the next character: ");
                 nextChar = input.next();
                 prefix += nextChar;
             }
-            if(nextChar.equals("$")) {
-                // this will cause an error if I pass it into my DLB
-                // be aware of where to put it when the time comes to implement
-                // but we add the word to our user prediction arraylist.
-                prefix = prefix.substring(0, prefix.length() - 1);
-                placeWordInUserHistory(prefix, uHistory);
+            // for every iteration we check if the user wants to end the run
+            // works for all cases: the first word, a new word, or a regular old iteration
+            // also works with the predictions (1-5)
+            if (nextChar.equals("!")) {
+                break;
+            }
+            else if (nextChar.equals("$")) {
+                // add the word to our user prediction arraylist
+                if (prefix.equals("$")) {
+                    System.out.println("You didn't submit a word!");
+                } else {
+                    prefix = prefix.substring(0, prefix.length() - 1);
+                    placeWordInUserHistory(prefix, uHistory);
+                }
                 prefix = null;
                 isNewWord = true;
-            } else {
-                correctPrediction = isPredictionCorrect(finalPredictions, nextChar, uHistory);
-                if(correctPrediction) {
+            }
+            else if (!isNewWord) {
+                // deal with the number input here
+
+                // and the prefixes
+
+
+
+                correctPrediction = isPredictionCorrect(finalPredictions, nextChar, uHistory, input);
+                if (correctPrediction) {
                     prefix = null;
                     isNewWord = true;
                 }
