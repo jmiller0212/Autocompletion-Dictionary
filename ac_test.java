@@ -30,16 +30,11 @@ public class ac_test {
             } else {
                 BufferedReader br = new BufferedReader(new FileReader("user_history.txt"));
                 String line = br.readLine();
-                String str;
-                String num;
-                String delim = "[_]";
+                String delim = "[:]";
                 String[] tokens;
                 while(line != null) {
                     tokens = line.split(delim);
-                    str = tokens[0];
-                    num = tokens[1];
-                    int freq = Integer.parseInt(String.valueOf(num));
-                    hm.put(str, freq);
+                    hm.put(tokens[0], Integer.parseInt(String.valueOf(tokens[1])));
                     line = br.readLine();
                 }
                 br.close();
@@ -49,6 +44,7 @@ public class ac_test {
         }
         return hm;
     }
+
     public static void printHashMap(HashMap<String, Integer> hm) {
         if(hm.isEmpty()) {
             System.out.println("empty hashmap");
@@ -56,14 +52,15 @@ public class ac_test {
             System.out.println(hm);
         }
     }
+
     public static void writeToUserHistoryFile(HashMap<String, Integer> hm) {
         try {
             FileWriter fileWriter = new FileWriter("user_history.txt");
             PrintWriter printWriter = new PrintWriter(fileWriter);
-            Iterator<String> iterateS = hm.keySet().iterator();
-            Iterator<Integer> iterateI = hm.values().iterator();
-            while(iterateS.hasNext()) {
-                printWriter.println(iterateS.next()+"_"+iterateI.next());
+            Iterator<String> words = hm.keySet().iterator();
+            Iterator<Integer> counts = hm.values().iterator();
+            while(words.hasNext()) {
+                printWriter.println(words.next()+":"+counts.next());
             }
             printWriter.close();
         } catch (IOException e) {
@@ -91,12 +88,12 @@ public class ac_test {
     // frequency
     public static HashMap<String, Integer> findUserPredictions(HashMap<String, Integer> userHash, String prefix) {
         HashMap<String, Integer> userPredictions = new HashMap<String, Integer>();
-        Iterator<String> iterateS = userHash.keySet().iterator();
+        Iterator<String> words = userHash.keySet().iterator();
         String key;
-        while(iterateS.hasNext()) {
+        while(words.hasNext()) {
             // now we have to check each iteration to see if each string
             // in the HashMap has the current prefix
-            key = iterateS.next();
+            key = words.next();
             if(key.startsWith(prefix)) {
                 userPredictions.put(key, userHash.get(key));
             }
@@ -141,8 +138,6 @@ public class ac_test {
     // we check if the user accepted a prediction and then we store it into the user_history arraylist
     // case where the user_history arraylist suggests a word based on the prefix
     // definitely have to revise this method
-
-    
     public static boolean isPredictionCorrect(ArrayList<String> predictions, String option, HashMap<String, Integer> userHistory) {
         System.out.println("");
         String word;
@@ -190,7 +185,6 @@ public class ac_test {
         }
     }
     public static void main(String[] args) {
-        boolean runProgram = true;
         String prefix;
         String nextChar;
         long startTime;
@@ -207,13 +201,15 @@ public class ac_test {
         uHistory = createUserHistoryFile(uHistory);
 
         // initializes the scanner
+        System.out.println("To complete a word, enter: '$'");
+        System.out.println("To exit, enter: '!'");
         System.out.print("\nEnter your first character: ");
         Scanner input = new Scanner(System.in);
         nextChar = input.next();
         prefix = nextChar;
         boolean isNewWord = false;
 
-        while(runProgram == true) {
+        while(true) {
             // is this the start of a new word? if so we need to get the
             // nextChar and prefix before passing into the DLB
             if(isNewWord) {
@@ -226,9 +222,13 @@ public class ac_test {
             // works for all cases: the first word, a new word, or a regular old iteration
             // also works with the predictions (1-5)
             if(nextChar.equals("!")) {
-                runProgram = false;
                 break;
             }
+            // then if nextChar.equals("$"); right?
+            // if(nextChar.equals("$")) {
+
+            // }
+
             startTime = System.nanoTime();
             dPredictions = dictionary.suggestWords(prefix);
             printElapsedTime(startTime, searchTimes);
